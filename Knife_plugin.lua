@@ -1,99 +1,80 @@
--- ODH Plugin: Advanced Visuals
--- Save as .lua and upload to your GitHub for the raw link
+-- ODH Plugin: Knife & Glossy RTX
+-- Use Path: /kwilliston51-ops/Knife_plugin.lua/main/Knife_plugin.lua
 
-local Plugin = {}
+local ODH_Lib = _G.ODH_Library
+local PluginTab = ODH_Lib:CreateTab("Plugins") -- This adds it to the existing Plugins section
 
--- 1. Visible Fake Knife (FE Physical Stab)
-function Plugin.SpawnFakeKnife()
+-- 1. Fake Knife (Stabbable, Non-Killable, Visible)
+local function SpawnFakeKnife()
     local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
+    local char = player.Character or player.CharacterAdded:Wait()
     
-    local knife = Instance.new("Tool")
-    knife.Name = "Fake Knife"
-    knife.RequiresHandle = true
-    knife.Parent = player.Backpack
+    local tool = Instance.new("Tool")
+    tool.Name = "Fake Knife"
+    tool.Parent = player.Backpack
 
     local handle = Instance.new("Part")
     handle.Name = "Handle"
     handle.Size = Vector3.new(0.2, 0.5, 2)
-    handle.Color = Color3.fromRGB(80, 80, 80)
-    handle.Material = Enum.Material.Glass -- Extra glossy look
-    handle.Parent = knife
+    handle.Material = Enum.Material.Glass 
+    handle.Color = Color3.fromRGB(200, 0, 0) -- Neon Red tint
+    handle.Parent = tool
 
     local mesh = Instance.new("SpecialMesh")
-    mesh.MeshId = "rbxassetid://121944801" 
+    mesh.MeshId = "rbxassetid://121944801"
     mesh.Scale = Vector3.new(1, 1, 1)
     mesh.Parent = handle
 
-    -- Visible Stab Logic (Manual CFrame lerping so others see the movement)
-    knife.Activated:Connect(function()
-        local arm = character:FindFirstChild("Right Arm") or character:FindFirstChild("RightHand")
-        if not arm then return end
-        
-        -- Simple physical lunge (Visible to others because you own the Tool)
-        for i = 0, 1, 0.2 do
-            handle.CFrame = handle.CFrame * CFrame.new(0, 0, -0.5) 
+    -- Visible Lunge (Network Ownership ensures others see the movement)
+    tool.Activated:Connect(function()
+        for i = 1, 6 do
+            handle.CFrame = handle.CFrame * CFrame.new(0, 0, -0.3)
             task.wait(0.01)
         end
-        for i = 0, 1, 0.2 do
-            handle.CFrame = handle.CFrame * CFrame.new(0, 0, 0.5)
+        for i = 1, 6 do
+            handle.CFrame = handle.CFrame * CFrame.new(0, 0, 0.3)
             task.wait(0.01)
         end
     end)
 end
 
--- 2. Glossy Red Sunset Shader
-function Plugin.ApplyRedGloss(state)
-    local lighting = game:GetService("Lighting")
-    
+-- 2. Glossy RTX Shader (Sunset Red)
+local function ToggleRTX(state)
+    local light = game:GetService("Lighting")
     if state then
-        -- Sunset Atmosphere
-        lighting.ClockTime = 17.8
-        lighting.Brightness = 4
-        lighting.ExposureCompensation = 1.5
+        light.ClockTime = 17.5
+        light.Brightness = 3.5
         
-        -- Red Gloss Effects
-        local bloom = Instance.new("BloomEffect", lighting)
-        bloom.Name = "RedGloss_Bloom"
-        bloom.Intensity = 2
+        local bloom = Instance.new("BloomEffect", light)
+        bloom.Name = "ODH_RTX_Bloom"
+        bloom.Intensity = 2.5
         bloom.Size = 30
-        bloom.Threshold = 0.5
         
-        local colorCorrection = Instance.new("ColorCorrectionEffect", lighting)
-        colorCorrection.Name = "RedGloss_Color"
-        colorCorrection.TintColor = Color3.fromRGB(255, 200, 200)
-        colorCorrection.Saturation = 0.5
-        
-        -- Force UI Blur for the "Glassy" feel
-        local blur = Instance.new("BlurEffect", lighting)
-        blur.Name = "RedGloss_Blur"
-        blur.Size = 10
+        local cc = Instance.new("ColorCorrectionEffect", light)
+        cc.Name = "ODH_RTX_Color"
+        cc.TintColor = Color3.fromRGB(255, 210, 210)
+        cc.Saturation = 0.6
     else
-        -- Clean up
-        if lighting:FindFirstChild("RedGloss_Bloom") then lighting.RedGloss_Bloom:Destroy() end
-        if lighting:FindFirstChild("RedGloss_Color") then lighting.RedGloss_Color:Destroy() end
-        if lighting:FindFirstChild("RedGloss_Blur") then lighting.RedGloss_Blur:Destroy() end
-        lighting.ClockTime = 14
+        if light:FindFirstChild("ODH_RTX_Bloom") then light.ODH_RTX_Bloom:Destroy() end
+        if light:FindFirstChild("ODH_RTX_Color") then light.ODH_RTX_Color:Destroy() end
     end
 end
 
--- 3. ODH Integration
--- Using the standard ODH tab creation logic
-local CustomTab = _G.ODH_Library:CreateTab("Visuals")
+-- 3. Creating the UI Buttons in the ODH Tab
+PluginTab:CreateSection("Utilities")
 
-CustomTab:CreateButton({
-    Name = "Spawn Visible Knife",
+PluginTab:CreateButton({
+    Name = "Spawn Fake Knife",
     Callback = function()
-        Plugin.SpawnFakeKnife()
+        SpawnFakeKnife()
+        ODH_Lib:Notify({Title = "Success", Content = "Knife added to backpack!"})
     end
 })
 
-CustomTab:CreateToggle({
-    Name = "Glossy Red Sunset",
+PluginTab:CreateToggle({
+    Name = "Glossy Red RTX",
     CurrentValue = false,
     Callback = function(Value)
-        Plugin.ApplyRedGloss(Value)
+        ToggleRTX(Value)
     end
 })
-
-return Plugin
